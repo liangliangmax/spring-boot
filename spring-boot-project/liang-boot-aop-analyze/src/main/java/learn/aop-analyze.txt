@@ -1,0 +1,1489 @@
+SpringApplication.run(ApplicationBootstrap.class,args);
+    --> return run(new Class<?>[] { primarySource }, args);
+        --> return new SpringApplication(primarySources).run(args);
+            --> org.springframework.boot.SpringApplication.run(java.lang.String...)
+                --> refreshContext(context);
+                    --> refresh(context);
+                        --> ((AbstractApplicationContext) applicationContext).refresh();
+                            --> super.refresh();
+                                --> org.springframework.context.support.AbstractApplicationContext.refresh
+                                        // Tell the subclass to refresh the internal bean factory.
+                                    --> ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+                                        // Prepare the bean factory for use in this context.
+                                    --> prepareBeanFactory(beanFactory);
+
+                                        // Allows post-processing of the bean factory in context subclasses.
+                                    --> postProcessBeanFactory(beanFactory);
+
+                                        // Invoke factory processors registered as beans in the context.
+                                    --> invokeBeanFactoryPostProcessors(beanFactory);
+                                        --> org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory)
+
+                                            --> List<BeanFactoryPostProcessor> beanFactoryPostProcessors = getBeanFactoryPostProcessors()
+                                                --> return this.beanFactoryPostProcessors;
+
+                                            --> PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, beanFactoryPostProcessors);
+                                                --> org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(org.springframework.beans.factory.config.ConfigurableListableBeanFactory, java.util.List<org.springframework.beans.factory.config.BeanFactoryPostProcessor>)
+                                                    --> if (beanFactory instanceof BeanDefinitionRegistry)
+                                                        --> List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
+
+                                                            ///////先处理BeanDefinitionRegistryPostProcessor类型的处理器///////////////
+
+                                                            // First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
+                                                        --> String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
+                                                        --> for (String ppName : postProcessorNames) // [org.springframework.context.annotation.internalConfigurationAnnotationProcessor]
+                                                            --> currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
+
+                                                        --> invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry); // currentRegistryProcessors = [org.springframework.context.annotation.ConfigurationClassPostProcessor]
+                                                            --> org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanDefinitionRegistryPostProcessors(Collection<? extends BeanDefinitionRegistryPostProcessor> postProcessors, BeanDefinitionRegistry registry)
+                                                                --> for (BeanDefinitionRegistryPostProcessor postProcessor : postProcessors)
+                                                                    --> postProcessor.postProcessBeanDefinitionRegistry(registry);
+                                                                        --> org.springframework.context.annotation.ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry)
+                                                                            --> processConfigBeanDefinitions(registry);
+                                                                                --> List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+                                                                                --> String[] candidateNames = registry.getBeanDefinitionNames();
+                                                                                --> for (String beanName : candidateNames) {
+                                                                                    --> BeanDefinition beanDef = registry.getBeanDefinition(beanName);
+                                                                                    --> if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory))
+                                                                                        --> configCandidates.add(new BeanDefinitionHolder(beanDef, beanName)); //Generic bean: class [com.liang.aop.ApplicationBootstrap]; scope=singleton; abstract=false; lazyInit=null; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null
+
+                                                                                --> SingletonBeanRegistry sbr = (SingletonBeanRegistry) registry;
+
+
+                                                                                    // Parse each @Configuration class
+                                                                                --> ConfigurationClassParser parser = new ConfigurationClassParser(
+                                                                                    				this.metadataReaderFactory, this.problemReporter, this.environment,
+                                                                                    				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
+
+                                                                                --> Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+                                                                                --> parser.parse(candidates);
+                                                                                    --> for (BeanDefinitionHolder holder : configCandidates) //[Bean definition with name 'applicationBootstrap': Generic bean: class [com.liang.aop.ApplicationBootstrap]; scope=singleton; abstract=false; lazyInit=null; autowireMode=0; dependencyCheck=0; autowireCandidate=true; primary=false; factoryBeanName=null; factoryMethodName=null; initMethodName=null; destroyMethodName=null]
+                                                                                        --> BeanDefinition bd = holder.getBeanDefinition();
+                                                                                        --> parse(bd.getBeanClassName(), holder.getBeanName());
+                                                                                            --> processConfigurationClass(new ConfigurationClass(metadata, beanName));
+                                                                                                --> SourceClass sourceClass = asSourceClass(configClass);
+                                                                                                    //获取所有的配置类
+                                                                                                --> sourceClass = doProcessConfigurationClass(configClass, sourceClass);
+                                                                                                    -->
+
+                                                                                --> Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
+                                                                                --> this.reader = new ConfigurationClassBeanDefinitionReader(
+                                                                                    						registry, this.sourceExtractor, this.resourceLoader, this.environment,
+                                                                                    						this.importBeanNameGenerator, parser.getImportRegistry());
+
+                                                                                --> this.reader.loadBeanDefinitions(configClasses);
+                                                                                    --> org.springframework.context.annotation.ConfigurationClassBeanDefinitionReader.loadBeanDefinitions(Set<ConfigurationClass> configurationModel)
+                                                                                        --> TrackedConditionEvaluator trackedConditionEvaluator = new TrackedConditionEvaluator();
+                                                                                        --> for (ConfigurationClass configClass : configurationModel)
+                                                                                            --> loadBeanDefinitionsForConfigurationClass(configClass, trackedConditionEvaluator);
+                                                                                                --> loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+                                                                                                --> loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
+                                                                                                    --> registrars.forEach((registrar, metadata) -> registrar.registerBeanDefinitions(metadata, this.registry, this.importBeanNameGenerator)); //AspectJAutoProxyRegistrar
+                                                                                                        --> org.springframework.context.annotation.ImportBeanDefinitionRegistrar.registerBeanDefinitions(org.springframework.core.type.AnnotationMetadata, org.springframework.beans.factory.support.BeanDefinitionRegistry, org.springframework.beans.factory.support.BeanNameGenerator)
+                                                                                                            --> registerBeanDefinitions(importingClassMetadata, registry);
+                                                                                                                --> org.springframework.context.annotation.AspectJAutoProxyRegistrar.registerBeanDefinitions
+
+                                                                                                                        //向容器中添加org.springframework.aop.config.internalAutoProxyCreator的beanDefinition
+                                                                                                                    --> AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
+                                                                                                                        --> org.springframework.aop.config.AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(org.springframework.beans.factory.support.BeanDefinitionRegistry)
+                                                                                                                            --> return registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry, null);
+                                                                                                                                --> return registerOrEscalateApcAsRequired(AnnotationAwareAspectJAutoProxyCreator.class, registry, source);
+                                                                                                                                    --> RootBeanDefinition beanDefinition = new RootBeanDefinition(cls); // cls = class org.springframework.aop.aspectj.annotation.AnnotationAwareAspectJAutoProxyCreator
+                                                                                                                                    --> beanDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);
+                                                                                                                                    --> beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+                                                                                                                                    --> registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition); // AUTO_PROXY_CREATOR_BEAN_NAME = org.springframework.aop.config.internalAutoProxyCreator
+                                                                                                                                        --> BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
+
+                                                                                                                                            //从容器中获取org.springframework.aop.config.internalAutoProxyCreator名称的BeanDefinition，获取不到就添加一个
+                                                                                                                                        --> this.beanDefinitionMap.put(beanName, beanDefinition);
+                                                                                                                                        --> List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
+                                                                                                                                        --> updatedDefinitions.addAll(this.beanDefinitionNames);
+                                                                                                                                        --> updatedDefinitions.add(beanName);
+                                                                                                                                        --> this.beanDefinitionNames = updatedDefinitions;
+
+                                                                                                                                    --> return beanDefinition;
+
+                                                                                                                        // 获取EnableAspectJAutoProxy.class注解中的信息
+                                                                                                                    --> AnnotationAttributes enableAspectJAutoProxy = AnnotationConfigUtils.attributesFor(importingClassMetadata, EnableAspectJAutoProxy.class);
+
+                                                                                    // Register the ImportRegistry as a bean in order to support ImportAware @Configuration classes
+                                                                                --> if (sbr != null && !sbr.containsSingleton(IMPORT_REGISTRY_BEAN_NAME)) // org.springframework.context.annotation.ConfigurationClassPostProcessor.importRegistry
+                                                                                    --> sbr.registerSingleton(IMPORT_REGISTRY_BEAN_NAME, parser.getImportRegistry());
+
+
+
+
+                                                            // Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
+                                                        --> postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
+
+                                                        --> for (String ppName : postProcessorNames)
+                                                            --> currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
+                                                        --> invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
+
+                                                            // Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
+                                                        --> postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
+                                                        --> for (String ppName : postProcessorNames)
+                                                            --> currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
+                                                        --> invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
+
+                                                            // Now, invoke the postProcessBeanFactory callback of all processors handled so far.
+                                                        --> invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
+                                                        --> invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
+
+
+                                                            ////////然后处理BeanFactoryPostProcessor///////////////
+
+                                                        --> String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
+
+                                                            // Separate between BeanFactoryPostProcessors that implement PriorityOrdered,
+                                                            // Ordered, and the rest.
+                                                        --> List<BeanFactoryPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
+                                                        --> List<String> orderedPostProcessors = new ArrayList<>();
+                                                        --> List<String> nonOrderedPostProcessors = new ArrayList<>();
+
+                                                            // First, invoke the BeanFactoryPostProcessors that implement PriorityOrdered.
+                                                        --> invokeBeanFactoryPostProcessors(priorityOrderedPostProcessors, beanFactory);
+
+                                                            // Next, invoke the BeanFactoryPostProcessors that implement Ordered.
+                                                        --> invokeBeanFactoryPostProcessors(orderedPostProcessors, beanFactory);
+
+                                                            // Finally, invoke all other BeanFactoryPostProcessors.
+                                                        --> invokeBeanFactoryPostProcessors(nonOrderedPostProcessors, beanFactory);
+
+
+                                        // Register bean processors that intercept bean creation.
+                                        //注册beanPostProcessor，为bean实例化提供一个修改的机会
+                                    --> registerBeanPostProcessors(beanFactory);
+                                        --> PostProcessorRegistrationDelegate.registerBeanPostProcessors(beanFactory, this);
+                                            --> String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
+                                                // Separate between BeanPostProcessors that implement PriorityOrdered,
+                                                // Ordered, and the rest.
+                                                //按优先级，把beanPostProcessor放到不同的list的中，然后进行注册
+                                            --> List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
+                                            --> List<BeanPostProcessor> internalPostProcessors = new ArrayList<>();
+                                            --> List<String> orderedPostProcessorNames = new ArrayList<>();
+                                            --> List<String> nonOrderedPostProcessorNames = new ArrayList<>();
+
+                                                // First, register the BeanPostProcessors that implement PriorityOrdered.
+                                            --> registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
+                                                // Next, register the BeanPostProcessors that implement Ordered.
+                                            --> registerBeanPostProcessors(beanFactory, orderedPostProcessors);
+                                                // Now, register all regular BeanPostProcessors.
+                                            --> registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
+                                                // Finally, re-register all internal BeanPostProcessors.
+                                            --> registerBeanPostProcessors(beanFactory, internalPostProcessors);
+
+                                                // Re-register post-processor for detecting inner beans as ApplicationListeners,
+                                                // moving it to the end of the processor chain (for picking up proxies etc).
+                                            --> beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(applicationContext));
+
+
+                                        // Initialize other special beans in specific context subclasses.
+                                    --> onRefresh();
+                                        --> super.onRefresh();
+                                        --> createWebServer();
+                                            --> WebServer webServer = this.webServer;
+                                            --> ServletContext servletContext = getServletContext();
+                                                --> return this.servletContext;
+                                            --> ServletWebServerFactory factory = getWebServerFactory();
+                                                --> String[] beanNames = getBeanFactory().getBeanNamesForType(ServletWebServerFactory.class); //[tomcatServletWebServerFactory]
+                                                --> return getBeanFactory().getBean(beanNames[0], ServletWebServerFactory.class);
+
+
+                                            --> this.webServer = factory.getWebServer(getSelfInitializer());
+                                                --> Tomcat tomcat = new Tomcat();
+                                                --> File baseDir = (this.baseDirectory != null) ? this.baseDirectory : createTempDir("tomcat");
+                                                --> tomcat.setBaseDir(baseDir.getAbsolutePath());
+                                                --> Connector connector = new Connector(this.protocol);
+                                                --> connector.setThrowOnFailure(true);
+                                                --> tomcat.getService().addConnector(connector);
+                                                --> customizeConnector(connector);
+                                                --> tomcat.setConnector(connector);
+                                                --> tomcat.getHost().setAutoDeploy(false);
+                                                --> configureEngine(tomcat.getEngine());
+                                                --> for (Connector additionalConnector : this.additionalTomcatConnectors)
+                                                    --> tomcat.getService().addConnector(additionalConnector);
+
+                                                --> prepareContext(tomcat.getHost(), initializers);
+                                                --> return getTomcatWebServer(tomcat);
+                                                    --> return new TomcatWebServer(tomcat, getPort() >= 0);
+                                                        --> this.tomcat = tomcat;
+                                                        --> this.autoStart = autoStart;
+                                                        --> initialize();
+                                                            --> Context context = findContext();
+                                                            --> this.tomcat.start();
+                                                                --> this.getServer();
+                                                                --> this.server.start();
+                                                                    --> prepareWebApplicationContext(servletContext);
+                                                                    --> registerApplicationScope(servletContext);
+                                                                    --> WebApplicationContextUtils.registerEnvironmentBeans(getBeanFactory(), servletContext);
+                                                                    --> for (ServletContextInitializer beans : getServletContextInitializerBeans())
+                                                                        --> beans.onStartup(servletContext);
+
+                                                            --> startDaemonAwaitThread();
+
+                                            --> initPropertySources();
+
+                                        // Instantiate all remaining (non-lazy-init) singletons.
+                                    --> finishBeanFactoryInitialization(beanFactory);
+                                            // Instantiate all remaining (non-lazy-init) singletons.
+                                        --> beanFactory.preInstantiateSingletons();
+                                            --> List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
+                                            --> for (String beanName : beanNames)
+                                                    //这次重点看calcLog，就是一个普通的bean，被注册到了容器中
+                                                --> RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName)  //calcLog
+
+                                                --> getBean(beanName);
+                                                    --> org.springframework.beans.factory.support.AbstractBeanFactory.getBean(java.lang.String)
+                                                        --> return doGetBean(name, null, null, false);
+                                                            --> org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean
+                                                                    // Check if bean definition exists in this factory.
+                                                                --> BeanFactory parentBeanFactory = getParentBeanFactory();
+                                                                --> final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+                                                                    // Guarantee initialization of beans that the current bean depends on.
+                                                                --> String[] dependsOn = mbd.getDependsOn();
+                                                                --> ObjectFactory<?> singletonFactory = createBean(beanName, mbd, args)
+                                                                    --> RootBeanDefinition mbdToUse = mbd;
+                                                                        // Make sure bean class is actually resolved at this point, and
+                                                                        // clone the bean definition in case of a dynamically resolved Class
+                                                                        // which cannot be stored in the shared merged bean definition.
+                                                                    --> Class<?> resolvedClass = resolveBeanClass(mbd, beanName); //class com.liang.aop.CalcLog
+                                                                        --> return mbd.getBeanClass();
+
+                                                                        // Prepare method overrides.
+                                                                    --> mbdToUse.prepareMethodOverrides();
+
+                                                                        // Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+                                                                    --> Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
+                                                                        --> Object bean = null;
+                                                                        --> if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors())
+                                                                            --> Class<?> targetType = determineTargetType(beanName, mbd);
+                                                                                --> Class<?> targetType = mbd.getTargetType();
+                                                                                --> return targetType; //class com.liang.aop.CalcLog
+
+                                                                            --> bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+                                                                                --> for (BeanPostProcessor bp : getBeanPostProcessors())
+                                                                                    --> return null
+
+                                                                            --> return bean;
+
+                                                                    --> Object beanInstance = doCreateBean(beanName, mbdToUse, args);
+                                                                            // Instantiate the bean.
+                                                                        --> BeanWrapper instanceWrapper = null;
+                                                                        --> instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+                                                                        --> instanceWrapper = createBeanInstance(beanName, mbd, args);
+                                                                            --> Class<?> beanClass = resolveBeanClass(mbd, beanName);
+                                                                            --> Supplier<?> instanceSupplier = mbd.getInstanceSupplier();
+                                                                            --> Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
+                                                                            --> return instantiateBean(beanName, mbd);
+                                                                                --> final BeanFactory parent = this;
+                                                                                --> beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, parent); // CglibSubclassingInstantiationStrategy
+                                                                                    --> constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+                                                                                    --> final Class<?> clazz = bd.getBeanClass(); // class com.liang.aop.CalcLog
+                                                                                    --> constructorToUse = clazz.getDeclaredConstructor();
+                                                                                    --> bd.resolvedConstructorOrFactoryMethod = constructorToUse;
+                                                                                    --> return BeanUtils.instantiateClass(constructorToUse);
+                                                                                        --> return ctor.newInstance(argsWithDefaultValues);
+
+                                                                                --> BeanWrapper bw = new BeanWrapperImpl(beanInstance);
+                                                                                --> initBeanWrapper(bw);
+                                                                                --> return bw;
+
+                                                                        --> final Object bean = instanceWrapper.getWrappedInstance();
+                                                                        --> Class<?> beanType = instanceWrapper.getWrappedClass(); //class com.liang.aop.CalcLog
+                                                                        --> applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
+
+                                                                        --> addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
+                                                                        --> Object exposedObject = bean;
+                                                                            //
+                                                                        --> populateBean(beanName, mbd, instanceWrapper);
+                                                                        --> exposedObject = initializeBean(beanName, exposedObject, mbd);
+                                                                            --> invokeAwareMethods(beanName, bean);
+                                                                            --> Object wrappedBean = bean;
+                                                                            --> wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName); //wrappedBean = CalcLog
+                                                                            --> invokeInitMethods(beanName, wrappedBean, mbd);
+                                                                            --> wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+                                                                            --> return wrappedBean;
+                                                                        --> registerDisposableBeanIfNecessary(beanName, bean, mbd);
+                                                                        --> return exposedObject;
+
+                                                                    --> return beanInstance;
+
+                                                                --> sharedInstance = getSingleton(beanName,bean)
+                                                                    --> Object singletonObject = this.singletonObjects.get(beanName);
+                                                                    --> singletonObject = singletonFactory.getObject();
+                                                                    --> return singletonObject;
+
+                                                                --> bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+                                                                    --> return super.getObjectForBeanInstance(beanInstance, name, beanName, mbd);
+                                                                        --> return beanInstance;
+
+                                                                --> return (T) bean;
+
+
+                                                    //这次重点看CalcController，被包装的类
+                                                --> RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName); //calcController
+                                                --> getBean(beanName);
+                                                    --> org.springframework.beans.factory.support.AbstractBeanFactory.getBean(java.lang.String)
+                                                        --> return doGetBean(name, null, null, false);
+                                                            --> final String beanName = transformedBeanName(name); //calcController
+                                                            --> Object sharedInstance = getSingleton(beanName);
+                                                                --> org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(java.lang.String)
+                                                                    --> return getSingleton(beanName, true);
+                                                                        --> Object singletonObject = this.singletonObjects.get(beanName);
+                                                                        --> return singletonObject; //null
+                                                            --> final RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
+                                                                --> return getMergedBeanDefinition(beanName, getBeanDefinition(beanName));
+                                                                    --> return getMergedBeanDefinition(beanName, bd, null);
+                                                                        --> mbd = this.mergedBeanDefinitions.get(beanName);
+                                                                        --> mbd = new RootBeanDefinition(bd);
+                                                                        --> this.mergedBeanDefinitions.put(beanName, mbd);
+                                                                        --> return mbd;
+
+                                                            --> String[] dependsOn = mbd.getDependsOn();
+
+                                                            --> ObjectFactory<?> singletonFactory = createBean(beanName, mbd, args)
+                                                                --> RootBeanDefinition mbdToUse = mbd;
+                                                                --> Class<?> resolvedClass = resolveBeanClass(mbd, beanName); // class com.liang.aop.CalcController
+                                                                    // Prepare method overrides.
+                                                                --> mbdToUse.prepareMethodOverrides();
+
+                                                                    // Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+                                                                --> Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
+                                                                    --> Object bean = null;
+                                                                    --> if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors())
+                                                                        --> Class<?> targetType = determineTargetType(beanName, mbd);
+                                                                            --> Class<?> targetType = mbd.getTargetType();
+                                                                            --> return targetType; //class com.liang.aop.CalcController
+
+                                                                        --> bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
+                                                                            --> return null
+
+                                                                    --> return bean; //null
+
+                                                                --> Object beanInstance = doCreateBean(beanName, mbdToUse, args);
+                                                                    --> org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean
+                                                                        --> BeanWrapper instanceWrapper = null;
+                                                                        --> instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+                                                                        --> instanceWrapper = createBeanInstance(beanName, mbd, args);
+                                                                            --> Class<?> beanClass = resolveBeanClass(mbd, beanName);
+                                                                            --> Supplier<?> instanceSupplier = mbd.getInstanceSupplier();
+                                                                                // Candidate constructors for autowiring?
+                                                                            --> Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
+
+                                                                                // Preferred constructors for default construction?
+                                                                            --> ctors = mbd.getPreferredConstructors();
+                                                                                // No special handling: simply use no-arg constructor.
+                                                                            --> return instantiateBean(beanName, mbd);
+                                                                                --> final BeanFactory parent = this;
+                                                                                --> beanInstance = getInstantiationStrategy().instantiate(mbd, beanName, parent);
+                                                                                    --> constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
+                                                                                    --> final Class<?> clazz = bd.getBeanClass();
+                                                                                        //空参数的构造函数
+                                                                                    --> constructorToUse = clazz.getDeclaredConstructor();
+                                                                                    --> bd.resolvedConstructorOrFactoryMethod = constructorToUse;
+                                                                                    --> return BeanUtils.instantiateClass(constructorToUse);
+                                                                                        --> return ctor.newInstance(argsWithDefaultValues);
+
+                                                                                --> BeanWrapper bw = new BeanWrapperImpl(beanInstance);
+                                                                                --> initBeanWrapper(bw);
+                                                                                --> return bw;
+
+                                                                        --> final Object bean = instanceWrapper.getWrappedInstance();
+                                                                        --> Class<?> beanType = instanceWrapper.getWrappedClass(); //class com.liang.aop.CalcController
+                                                                        --> applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
+                                                                        --> addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
+
+                                                                            // Initialize the bean instance.
+                                                                        --> Object exposedObject = bean;
+                                                                        --> populateBean(beanName, mbd, instanceWrapper);
+                                                                        --> exposedObject = initializeBean(beanName, exposedObject, mbd);
+                                                                            --> invokeAwareMethods(beanName, bean);
+
+                                                                            --> Object wrappedBean = bean;
+
+                                                                            --> wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
+                                                                                --> Object result = existingBean;
+                                                                                --> for (BeanPostProcessor processor : getBeanPostProcessors())
+                                                                                    --> Object current = processor.postProcessBeforeInitialization(result, beanName);
+                                                                                        --> return bean;
+                                                                                    --> result = current;
+                                                                                --> return result; //CalcController 元类型，不是包装
+
+
+                                                                            --> invokeInitMethods(beanName, wrappedBean, mbd);
+
+                                                                                //此处aop开始创建代理对象，所有的bean初始化时候都要经过这里，只是aop有切面函数，可以放行不拦截的bean
+                                                                            --> wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+                                                                                --> Object result = existingBean;
+                                                                                --> for (BeanPostProcessor processor : getBeanPostProcessors()) //AnnotationAwareAspectJAutoProxyCreator
+                                                                                    --> Object current = processor.postProcessAfterInitialization(result, beanName);
+                                                                                        --> return wrapIfNecessary(bean, beanName, cacheKey);
+                                                                                                // Create proxy if we have advice.
+                                                                                            --> Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+                                                                                                --> List<Advisor> advisors = findEligibleAdvisors(beanClass, beanName);
+                                                                                                    --> List<Advisor> candidateAdvisors = findCandidateAdvisors();
+                                                                                                            // Add all the Spring advisors found according to superclass rules.
+                                                                                                        --> List<Advisor> advisors = super.findCandidateAdvisors();
+                                                                                                            --> org.springframework.aop.framework.autoproxy.AbstractAdvisorAutoProxyCreator.findCandidateAdvisors
+                                                                                                                --> return this.advisorRetrievalHelper.findAdvisorBeans();
+                                                                                                                    --> String[] advisorNames = this.cachedAdvisorBeanNames; // length = 0
+                                                                                                                    --> return new ArrayList<>();
+
+                                                                                                        --> advisors.addAll(this.aspectJAdvisorsBuilder.buildAspectJAdvisors());
+                                                                                                            --> List<String> aspectNames = this.aspectBeanNames; [calcLog]
+                                                                                                            --> List<Advisor> advisors = new ArrayList<>();
+                                                                                                            --> for (String aspectName : aspectNames)
+                                                                                                                --> List<Advisor> cachedAdvisors = this.advisorsCache.get(aspectName); //获取了CalcLog中的3个aop方法
+                                                                                                                --> advisors.addAll(cachedAdvisors);
+
+                                                                                                            --> return advisors;
+
+                                                                                                        --> return advisors;
+
+                                                                                                    --> List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+                                                                                                        --> ProxyCreationContext.setCurrentProxiedBeanName(beanName);
+                                                                                                            --> org.springframework.aop.framework.autoproxy.ProxyCreationContext
+                                                                                                                --> private static final ThreadLocal<String> currentProxiedBeanName = new NamedThreadLocal<>("Name of currently proxied bean");
+                                                                                                                --> currentProxiedBeanName.set(beanName);
+
+                                                                                                        --> return AopUtils.findAdvisorsThatCanApply(candidateAdvisors, beanClass);
+                                                                                                            --> for (Advisor candidate : candidateAdvisors)
+                                                                                                                --> if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz))
+
+                                                                                                                    --> eligibleAdvisors.add(candidate); //0
+
+                                                                                                                //上面先把同时满足接口和canApply的切面添加到eligibleAdvisors中，下面分开在判断一次，因为有的切面是实现接口的，有的切面是切面表达式的
+                                                                                                            --> for (Advisor candidate : candidateAdvisors)
+                                                                                                                --> boolean canApply = canApply(candidate, clazz, hasIntroductions)
+                                                                                                                    --> if (advisor instanceof PointcutAdvisor)
+                                                                                                                        --> PointcutAdvisor pca = (PointcutAdvisor) advisor;
+                                                                                                                        --> return canApply(pca.getPointcut(), targetClass, hasIntroductions);
+                                                                                                                            --> IntroductionAwareMethodMatcher introductionAwareMethodMatcher = null;
+                                                                                                                            --> introductionAwareMethodMatcher = (IntroductionAwareMethodMatcher) methodMatcher;
+                                                                                                                            --> Set<Class<?>> classes = new LinkedHashSet<>();
+                                                                                                                            --> if (!Proxy.isProxyClass(targetClass))
+                                                                                                                                --> classes.add(ClassUtils.getUserClass(targetClass)); //class com.liang.aop.CalcController
+
+                                                                                                                                //添加接口的方法拦截
+                                                                                                                            --> classes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetClass));
+                                                                                                                            --> for (Class<?> clazz : classes)
+                                                                                                                                --> Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz); //class com.liang.aop.CalcController
+                                                                                                                                --> for (Method method : methods)
+                                                                                                                                    --> if (introductionAwareMethodMatcher != null ?
+                                                                                                                                        						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
+                                                                                                                                        						methodMatcher.matches(method, targetClass))
+                                                                                                                                        --> return true;
+
+                                                                                                                --> if (canApply)
+                                                                                                                    --> eligibleAdvisors.add(candidate);
+
+                                                                                                            --> return eligibleAdvisors;
+
+                                                                                                    --> extendAdvisors(eligibleAdvisors);
+                                                                                                        --> //空方法
+
+                                                                                                    --> eligibleAdvisors = sortAdvisors(eligibleAdvisors);
+
+                                                                                                    --> return eligibleAdvisors;
+
+                                                                                                --> return advisors.toArray();
+
+                                                                                            --> Object proxy = createProxy(bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
+                                                                                                --> abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware
+                                                                                                    --> AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
+                                                                                                        --> beanFactory.getMergedBeanDefinition(beanName).setAttribute(Conventions.getQualifiedAttributeName(AutoProxyUtils.class, "originalTargetClass"), targetClass); // targetClass = class com.liang.aop.CalcController
+
+                                                                                                    --> ProxyFactory proxyFactory = new ProxyFactory();
+                                                                                                    --> proxyFactory.copyFrom(this);
+
+                                                                                                    --> Advisor[] advisors = buildAdvisors(beanName, specificInterceptors); // specificInterceptors 中是CalcLog中的四个拦截方法
+                                                                                                        --> Advisor[] commonInterceptors = resolveInterceptorNames();
+                                                                                                            --> BeanFactory bf = this.beanFactory;
+                                                                                                            --> ConfigurableBeanFactory cbf = (ConfigurableBeanFactory) bf
+                                                                                                            --> List<Advisor> advisors = new ArrayList<>();
+                                                                                                            --> for (String beanName : this.interceptorNames)
+                                                                                                                --> this.interceptorNames是空的
+
+                                                                                                            --> return advisors.toArray(new Advisor[0]); //返回空数组
+
+                                                                                                        --> List<Object> allInterceptors = new ArrayList<>();
+                                                                                                        --> allInterceptors.addAll(Arrays.asList(specificInterceptors)); //添加完了还是原来的四个拦截方法
+                                                                                                        --> Advisor[] advisors = new Advisor[allInterceptors.size()];
+                                                                                                        --> for (int i = 0; i < allInterceptors.size(); i++)
+                                                                                                            --> advisors[i] = this.advisorAdapterRegistry.wrap(allInterceptors.get(i))
+                                                                                                                --> return (Advisor) adviceObject;
+
+                                                                                                        --> return advisors; // 返回四个拦截方法
+
+                                                                                                    --> proxyFactory.addAdvisors(advisors);
+                                                                                                    --> proxyFactory.setTargetSource(targetSource); // targetSource = SingletonTargetSource for target object [com.liang.aop.CalcController@35fb22a9]
+                                                                                                    --> customizeProxyFactory(proxyFactory);
+                                                                                                        --> 空方法
+
+                                                                                                    --> proxyFactory.setFrozen(this.freezeProxy);
+                                                                                                    --> proxyFactory.setPreFiltered(true);
+                                                                                                    --> ClassLoader classLoader = getProxyClassLoader()
+                                                                                                        --> return this.proxyClassLoader; // Launcher$AppClassLoader
+
+                                                                                                    --> return proxyFactory.getProxy(classLoader);
+                                                                                                        --> org.springframework.aop.framework.ProxyFactory.getProxy(java.lang.ClassLoader)
+                                                                                                            --> AopProxy aopProxy = createAopProxy()
+                                                                                                                --> org.springframework.aop.framework.ProxyCreatorSupport.createAopProxy
+                                                                                                                    --> AopProxyFactory aopProxyFactory = getAopProxyFactory()
+                                                                                                                        --> return this.aopProxyFactory =  new DefaultAopProxyFactory();
+
+                                                                                                                    --> return aopProxyFactory.createAopProxy(this);
+                                                                                                                        --> org.springframework.aop.framework.DefaultAopProxyFactory.createAopProxy(AdvisedSupport config) implements AopProxyFactory, Serializable
+                                                                                                                            --> Class<?> targetClass = config.getTargetClass(); // class com.liang.aop.CalcController
+                                                                                                                            --> return new ObjenesisCglibAopProxy(config);
+                                                                                                                                --> super(config);
+                                                                                                                                    --> org.springframework.aop.framework.CglibAopProxy
+                                                                                                                                        --> this.advised = config;
+                                                                                                                                        --> this.advisedDispatcher = new AdvisedDispatcher(this.advised);
+
+                                                                                                            --> return aopProxy.getProxy(classLoader);
+                                                                                                                --> Class<?> rootClass = this.advised.getTargetClass();
+                                                                                                                --> Class<?> proxySuperClass = rootClass;
+
+                                                                                                                    // Configure CGLIB Enhancer...
+                                                                                                                --> Enhancer enhancer = createEnhancer();
+                                                                                                                    --> return new Enhancer();
+                                                                                                                --> enhancer.setClassLoader(classLoader);
+                                                                                                                --> enhancer.setSuperclass(proxySuperClass); // class com.liang.aop.CalcController
+                                                                                                                --> enhancer.setInterfaces(AopProxyUtils.completeProxiedInterfaces(this.advised));
+                                                                                                                    --> return completeProxiedInterfaces(advised, false);
+                                                                                                                        --> Class<?>[] specifiedInterfaces = advised.getProxiedInterfaces(); // 空数组
+                                                                                                                            // No user-specified interfaces: check whether target class is an interface.
+                                                                                                                        --> Class<?> targetClass = advised.getTargetClass(); // class com.liang.aop.CalcController
+                                                                                                                        --> specifiedInterfaces = advised.getProxiedInterfaces(); // 空数组
+                                                                                                                        --> boolean addSpringProxy = !advised.isInterfaceProxied(SpringProxy.class); // true
+                                                                                                                        --> boolean addAdvised = !advised.isOpaque() && !advised.isInterfaceProxied(Advised.class); // true
+                                                                                                                        --> boolean addDecoratingProxy = (decoratingProxy && !advised.isInterfaceProxied(DecoratingProxy.class)); // false
+
+                                                                                                                        --> Class<?>[] proxiedInterfaces = new Class<?>[specifiedInterfaces.length + nonUserIfcCount];
+                                                                                                                            --> proxiedInterfaces[0] = interface org.springframework.aop.SpringProxy
+                                                                                                                            --> proxiedInterfaces[1] = interface org.springframework.aop.framework.Advised
+
+                                                                                                                        --> --> return proxiedInterfaces;
+
+                                                                                                                --> enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
+                                                                                                                    --> INSTANCE = new SpringNamingPolicy()
+
+                                                                                                                    //生成class的策略
+                                                                                                                --> enhancer.setStrategy(new ClassLoaderAwareGeneratorStrategy(classLoader));
+
+                                                                                                                --> Callback[] callbacks = getCallbacks(rootClass);
+                                                                                                                    --> boolean exposeProxy = this.advised.isExposeProxy(); // false
+                                                                                                                    --> boolean isFrozen = this.advised.isFrozen(); // false
+                                                                                                                    --> boolean isStatic = this.advised.getTargetSource().isStatic(); // true
+
+                                                                                                                        // 此处类实现了MethodInterceptor接口
+                                                                                                                    --> Callback aopInterceptor = new DynamicAdvisedInterceptor(this.advised); // static class DynamicAdvisedInterceptor implements MethodInterceptor, Serializable
+
+                                                                                                                    --> Callback targetInterceptor = new StaticUnadvisedInterceptor(this.advised.getTargetSource().getTarget()) // StaticUnadvisedInterceptor implements MethodInterceptor
+                                                                                                                    --> Callback targetDispatcher = new StaticDispatcher(this.advised.getTargetSource().getTarget()) // static class StaticDispatcher implements Dispatcher, Serializable
+                                                                                                                    --> Callback[] mainCallbacks = new Callback[] {
+                                                                                                                        				aopInterceptor,  // for normal advice
+                                                                                                                        				targetInterceptor,  // invoke target without considering advice, if optimized
+                                                                                                                        				new SerializableNoOp(),  // no override for methods mapped to this
+                                                                                                                        				targetDispatcher, this.advisedDispatcher,
+                                                                                                                        				new EqualsInterceptor(this.advised),
+                                                                                                                        				new HashCodeInterceptor(this.advised)}
+
+                                                                                                                    --> Callback[] callbacks = mainCallbacks
+                                                                                                                    --> return callbacks;
+
+                                                                                                                --> Class<?>[] types = new Class<?>[callbacks.length];
+                                                                                                                --> for (int x = 0; x < types.length; x++)
+                                                                                                                    --> types[x] = callbacks[x].getClass(); // [
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$StaticUnadvisedInterceptor
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$SerializableNoOp
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$StaticDispatcher
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$AdvisedDispatcher
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$EqualsInterceptor
+                                                                                                                                                                    class org.springframework.aop.framework.CglibAopProxy$HashCodeInterceptor
+                                                                                                                                                                ]
+
+                                                                                                                --> enhancer.setCallbackFilter(new ProxyCallbackFilter(this.advised.getConfigurationOnlyCopy(), this.fixedInterceptorMap, this.fixedInterceptorOffset));
+                                                                                                                    -->
+
+                                                                                                                --> enhancer.setCallbackTypes(types);
+
+                                                                                                                    // Generate the proxy class and create a proxy instance.
+                                                                                                                --> return createProxyClassAndInstance(enhancer, callbacks);
+                                                                                                                    --> org.springframework.aop.framework.ObjenesisCglibAopProxy.createProxyClassAndInstance
+                                                                                                                        --> Class<?> proxyClass = enhancer.createClass();
+                                                                                                                            --> org.springframework.cglib.proxy.Enhancer.createClass
+                                                                                                                                --> return (Class) createHelper();
+                                                                                                                                    --> Object key = KEY_FACTORY.newInstance((superclass != null) ? superclass.getName() : null,
+                                                                                                                                        				ReflectUtils.getNames(interfaces),
+                                                                                                                                        				filter == ALL_ZERO ? null : new WeakCacheKey<CallbackFilter>(filter),
+                                                                                                                                        				callbackTypes,
+                                                                                                                                        				useFactory,
+                                                                                                                                        				interceptDuringConstruction,
+                                                                                                                                        				serialVersionUID); // key = com.liang.aop.CalcController, {org.springframework.aop.SpringProxy, org.springframework.aop.framework.Advised}, org.springframework.aop.framework.CglibAopProxy$ProxyCallbackFilter@122813fd, {Lorg/springframework/cglib/proxy/MethodInterceptor;, Lorg/springframework/cglib/proxy/MethodInterceptor;, Lorg/springframework/cglib/proxy/NoOp;, Lorg/springframework/cglib/proxy/Dispatcher;, Lorg/springframework/cglib/proxy/Dispatcher;, Lorg/springframework/cglib/proxy/MethodInterceptor;, Lorg/springframework/cglib/proxy/MethodInterceptor;}, true, true, null
+
+                                                                                                                                    --> Object result = super.create(key);
+                                                                                                                                        --> org.springframework.cglib.core.AbstractClassGenerator.create(Object key)
+                                                                                                                                            --> ClassLoader loader = getClassLoader();
+                                                                                                                                            --> ClassLoaderData data = cache.get(loader);
+                                                                                                                                            --> Object obj = data.get(this, getUseCache());
+                                                                                                                                                    .
+                                                                                                                                                    .
+                                                                                                                                                    .中间还有好多步骤，去生成class
+                                                                                                                                                --> org.springframework.aop.framework.CglibAopProxy.ProxyCallbackFilter.accept
+                                                                                                                                                    --> Class<?> targetClass = this.advised.getTargetClass(); // class com.liang.aop.CalcController
+
+                                                                                                                                                        // Proxy is not yet available, but that shouldn't matter.
+                                                                                                                                                    --> List<?> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+                                                                                                                                                        --> org.springframework.aop.framework.AdvisedSupport.getInterceptorsAndDynamicInterceptionAdvice(Method method, @Nullable Class<?> targetClass)  extends ProxyConfig implements Advised
+
+                                                                                                                                                            --> MethodCacheKey cacheKey = new MethodCacheKey(method); //method = public int com.liang.aop.CalcController.add(int,int)
+                                                                                                                                                            --> List<Object> cached = this.methodCache.get(cacheKey);
+                                                                                                                                                            --> cached = this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(this, method, targetClass);
+                                                                                                                                                                --> org.springframework.aop.framework.DefaultAdvisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(Advised config, Method method, @Nullable Class<?> targetClass) implements AdvisorChainFactory, Serializable
+                                                                                                                                                                    --> AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance(); // new DefaultAdvisorAdapterRegistry()
+                                                                                                                                                                    --> Advisor[] advisors = config.getAdvisors();
+                                                                                                                                                                    --> List<Object> interceptorList = new ArrayList<>(advisors.length);
+                                                                                                                                                                    --> Class<?> actualClass = targetClass;
+                                                                                                                                                                    --> for (Advisor advisor : advisors)
+                                                                                                                                                                        --> if (advisor instanceof PointcutAdvisor)
+                                                                                                                                                                            --> PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
+                                                                                                                                                                            --> if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass))
+                                                                                                                                                                                --> MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher(); //MethodMatcher.TRUE
+                                                                                                                                                                                --> match = ((IntroductionAwareMethodMatcher) mm).matches(method, actualClass, false);
+                                                                                                                                                                                    --> org.springframework.aop.aspectj.AspectJExpressionPointcut.matches(java.lang.reflect.Method, java.lang.Class<?>, boolean)
+                                                                                                                                                                                        --> ShadowMatch shadowMatch = getTargetShadowMatch(method, targetClass);
+                                                                                                                                                                                            --> Method targetMethod = AopUtils.getMostSpecificMethod(method, targetClass);
+                                                                                                                                                                                                --> Class<?> specificTargetClass =  ClassUtils.getUserClass(targetClass) //class com.liang.aop.CalcController
+                                                                                                                                                                                                --> Method resolvedMethod = ClassUtils.getMostSpecificMethod(method, specificTargetClass);
+                                                                                                                                                                                                    --> return method;  //public int com.liang.aop.CalcController.add(int,int)
+
+                                                                                                                                                                                                    // If we are dealing with method with generic parameters, find the original method.
+                                                                                                                                                                                                --> return BridgeMethodResolver.findBridgedMethod(resolvedMethod);
+                                                                                                                                                                                                    --> return bridgeMethod;
+                                                                                                                                                                                            --> return getShadowMatch(targetMethod, method);
+                                                                                                                                                                                                --> ShadowMatch shadowMatch = this.shadowMatchCache.get(targetMethod);
+                                                                                                                                                                                                --> return shadowMatch;
+                                                                                                                                                                                        --> return true;
+
+                                                                                                                                                                                --> MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+                                                                                                                                                                                    --> org.springframework.aop.framework.adapter.DefaultAdvisorAdapterRegistry.getInterceptors
+                                                                                                                                                                                        --> List<MethodInterceptor> interceptors = new ArrayList<>(3);
+                                                                                                                                                                                        --> Advice advice = advisor.getAdvice();
+                                                                                                                                                                                        --> if (advice instanceof MethodInterceptor)
+                                                                                                                                                                                            --> interceptors.add((MethodInterceptor) advice);
+                                                                                                                                                                                        --> return interceptors.toArray(new MethodInterceptor[0]);
+
+                                                                                                                                                                                --> interceptorList.addAll(Arrays.asList(interceptors));
+
+                                                                                                                                                                        // 里面存的四个方法，但是类型包装了一下
+                                                                                                                                                                    --> return interceptorList; //[AspectJAfterThrowingAdvice,AfterReturningAdviceInterceptor->AspectJAfterReturningAdvice,MethodBeforeAdviceInterceptor->AspectJMethodBeforeAdvice]
+
+                                                                                                                                                            --> return cached;
+
+                                                                                                                                                    --> boolean haveAdvice = !chain.isEmpty(); // true
+                                                                                                                                                    --> boolean exposeProxy = this.advised.isExposeProxy(); //false
+                                                                                                                                                    --> boolean isStatic = this.advised.getTargetSource().isStatic(); // true
+                                                                                                                                                    --> boolean isFrozen = this.advised.isFrozen(); // false
+                                                                                                                                                    --> if (haveAdvice || !isFrozen)
+                                                                                                                                                        --> Method key = method; // public int com.liang.aop.CalcController.add(int,int)
+                                                                                                                                                        --> return AOP_PROXY;
+
+
+                                                                                                                                            --> return nextInstance(obj);
+                                                                                                                                                --> EnhancerFactoryData data = (EnhancerFactoryData) instance;
+                                                                                                                                                --> return data.generatedClass;
+
+                                                                                                                                    --> return result; //class com.liang.aop.CalcController$$EnhancerBySpringCGLIB$$d47596da
+
+                                                                                                                        --> Object proxyInstance = objenesis.newInstance(proxyClass, enhancer.getUseCache());
+                                                                                                                            --> org.springframework.objenesis.SpringObjenesis.newInstance(java.lang.Class<T>, boolean)
+                                                                                                                                --> ObjectInstantiator<T> objectInstantiator = getInstantiatorOf(clazz)
+                                                                                                                                    --> ObjectInstantiator<?> instantiator = this.cache.get(clazz); // null
+                                                                                                                                    --> ObjectInstantiator<T> newInstantiator = newInstantiatorOf(clazz);
+                                                                                                                                        --> ObjectInstantiator<T> instantiator = this.strategy.newInstantiatorOf(clazz);
+                                                                                                                                            --> org.springframework.objenesis.strategy.StdInstantiatorStrategy.newInstantiatorOf
+                                                                                                                                                --> return new SunReflectionFactoryInstantiator(type);
+                                                                                                                                                    --> Constructor<Object> javaLangObjectConstructor = getJavaLangObjectConstructor();
+                                                                                                                                                    --> this.mungedConstructor = SunReflectionFactoryHelper.newConstructorForSerialization(type, javaLangObjectConstructor);
+                                                                                                                                                    --> this.mungedConstructor.setAccessible(true);
+
+                                                                                                                                        --> return instantiator;
+
+                                                                                                                                    --> instantiator = newInstantiator;
+
+                                                                                                                                    --> return (ObjectInstantiator<T>) instantiator;
+
+                                                                                                                                --> return objectInstantiator.newInstance();
+                                                                                                                                    --> return this.mungedConstructor.newInstance((Object[])null);
+
+                                                                                                                        --> ((Factory) proxyInstance).setCallbacks(callbacks);
+
+                                                                                                                        --> return proxyInstance;
+
+                                                                                            --> this.advisedBeans.put(cacheKey, Boolean.FALSE);
+
+                                                                                            --> return proxy; // com.liang.aop.CalcController@35fb22a9 的包装类，已经不是原来的class了
+
+                                                                                    --> result = current;
+
+                                                                                    --> return result;
+
+                                                                            --> return wrappedBean; // CalcController$$EnhancerBySpringCGLIB$$d47596da@47047
+
+
+                                                                        --> registerDisposableBeanIfNecessary(beanName, bean, mbd);
+
+                                                                        --> return exposedObject;
+
+
+                                                                --> return beanInstance;
+
+                                                            --> sharedInstance = getSingleton(beanName,singletonFactory);
+                                                                --> Object singletonObject = this.singletonObjects.get(beanName);
+                                                                --> singletonObject = singletonFactory.getObject();
+                                                                --> return singletonObject;
+
+
+                                                            --> bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+                                                                --> return super.getObjectForBeanInstance(beanInstance, name, beanName, mbd);
+                                                                    --> org.springframework.beans.factory.support.AbstractBeanFactory.getObjectForBeanInstance
+                                                                        --> if (!(beanInstance instanceof FactoryBean) || BeanFactoryUtils.isFactoryDereference(name))
+                                                                            --> return beanInstance; // CalcController$$EnhancerBySpringCGLIB$$d47596da@47047
+
+                                                            --> return (T) bean;  // CalcController$$EnhancerBySpringCGLIB$$d47596da@47047
+
+
+
+                                            --> for (String beanName : beanNames)
+                                                    //还是看calcController
+                                                --> Object singletonInstance = getSingleton(beanName);  // CalcController$$EnhancerBySpringCGLIB$$d47596da@47047
+                                                --> 剩下没干什么
+
+                                        // Last step: publish corresponding event.
+                                    --> finishRefresh();
+                                        --> super.finishRefresh();
+                                        --> WebServer webServer = startWebServer();
+                                        --> publishEvent(new ServletWebServerInitializedEvent(webServer, this));
+
+
+
+
+// 生成的代理类为 CalcController$$EnhancerBySpringCGLIB$$9ebac27f
+
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by Fernflower decompiler)
+//
+
+package com.liang.aop;
+
+import java.lang.reflect.Method;
+import org.aopalliance.aop.Advice;
+import org.springframework.aop.Advisor;
+import org.springframework.aop.SpringProxy;
+import org.springframework.aop.TargetClassAware;
+import org.springframework.aop.TargetSource;
+import org.springframework.aop.framework.Advised;
+import org.springframework.aop.framework.AopConfigException;
+import org.springframework.cglib.core.ReflectUtils;
+import org.springframework.cglib.core.Signature;
+import org.springframework.cglib.proxy.Callback;
+import org.springframework.cglib.proxy.Dispatcher;
+import org.springframework.cglib.proxy.Factory;
+import org.springframework.cglib.proxy.MethodInterceptor;
+import org.springframework.cglib.proxy.MethodProxy;
+import org.springframework.cglib.proxy.NoOp;
+
+public class CalcController$$EnhancerBySpringCGLIB$$9ebac27f extends CalcController implements SpringProxy, Advised, Factory {
+    private boolean CGLIB$BOUND;
+    public static Object CGLIB$FACTORY_DATA;
+    private static final ThreadLocal CGLIB$THREAD_CALLBACKS;
+    private static final Callback[] CGLIB$STATIC_CALLBACKS;
+    private MethodInterceptor CGLIB$CALLBACK_0;
+    private MethodInterceptor CGLIB$CALLBACK_1;
+    private NoOp CGLIB$CALLBACK_2;
+    private Dispatcher CGLIB$CALLBACK_3;
+    private Dispatcher CGLIB$CALLBACK_4;
+    private MethodInterceptor CGLIB$CALLBACK_5;
+    private MethodInterceptor CGLIB$CALLBACK_6;
+    private static Object CGLIB$CALLBACK_FILTER;
+    private static final Method CGLIB$add$0$Method;
+    private static final MethodProxy CGLIB$add$0$Proxy;
+    private static final Object[] CGLIB$emptyArgs;
+    private static final Method CGLIB$equals$1$Method;
+    private static final MethodProxy CGLIB$equals$1$Proxy;
+    private static final Method CGLIB$toString$2$Method;
+    private static final MethodProxy CGLIB$toString$2$Proxy;
+    private static final Method CGLIB$hashCode$3$Method;
+    private static final MethodProxy CGLIB$hashCode$3$Proxy;
+    private static final Method CGLIB$clone$4$Method;
+    private static final MethodProxy CGLIB$clone$4$Proxy;
+
+    static void CGLIB$STATICHOOK3() {
+        CGLIB$THREAD_CALLBACKS = new ThreadLocal();
+        CGLIB$emptyArgs = new Object[0];
+        Class var0 = Class.forName("com.liang.aop.CalcController$$EnhancerBySpringCGLIB$$9ebac27f");
+        Class var1;
+        Method[] var10000 = ReflectUtils.findMethods(new String[]{"equals", "(Ljava/lang/Object;)Z", "toString", "()Ljava/lang/String;", "hashCode", "()I", "clone", "()Ljava/lang/Object;"}, (var1 = Class.forName("java.lang.Object")).getDeclaredMethods());
+        CGLIB$equals$1$Method = var10000[0];
+        CGLIB$equals$1$Proxy = MethodProxy.create(var1, var0, "(Ljava/lang/Object;)Z", "equals", "CGLIB$equals$1");
+        CGLIB$toString$2$Method = var10000[1];
+        CGLIB$toString$2$Proxy = MethodProxy.create(var1, var0, "()Ljava/lang/String;", "toString", "CGLIB$toString$2");
+        CGLIB$hashCode$3$Method = var10000[2];
+        CGLIB$hashCode$3$Proxy = MethodProxy.create(var1, var0, "()I", "hashCode", "CGLIB$hashCode$3");
+        CGLIB$clone$4$Method = var10000[3];
+        CGLIB$clone$4$Proxy = MethodProxy.create(var1, var0, "()Ljava/lang/Object;", "clone", "CGLIB$clone$4");
+        CGLIB$add$0$Method = ReflectUtils.findMethods(new String[]{"add", "(II)I"}, (var1 = Class.forName("com.liang.aop.CalcController")).getDeclaredMethods())[0];
+        CGLIB$add$0$Proxy = MethodProxy.create(var1, var0, "(II)I", "add", "CGLIB$add$0");
+    }
+
+    final int CGLIB$add$0(int var1, int var2) {
+        return super.add(var1, var2);
+    }
+
+    public final int add(int var1, int var2) {
+        MethodInterceptor var10000 = this.CGLIB$CALLBACK_0;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_0;
+        }
+
+        if (var10000 != null) {
+            Object var3 = var10000.intercept(this, CGLIB$add$0$Method, new Object[]{new Integer(var1), new Integer(var2)}, CGLIB$add$0$Proxy);
+            return var3 == null ? 0 : ((Number)var3).intValue();
+        } else {
+            return super.add(var1, var2);
+        }
+    }
+
+    final boolean CGLIB$equals$1(Object var1) {
+        return super.equals(var1);
+    }
+
+    public final boolean equals(Object var1) {
+        MethodInterceptor var10000 = this.CGLIB$CALLBACK_5;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_5;
+        }
+
+        if (var10000 != null) {
+            Object var2 = var10000.intercept(this, CGLIB$equals$1$Method, new Object[]{var1}, CGLIB$equals$1$Proxy);
+            return var2 == null ? false : (Boolean)var2;
+        } else {
+            return super.equals(var1);
+        }
+    }
+
+    final String CGLIB$toString$2() {
+        return super.toString();
+    }
+
+    public final String toString() {
+        MethodInterceptor var10000 = this.CGLIB$CALLBACK_0;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_0;
+        }
+
+        return var10000 != null ? (String)var10000.intercept(this, CGLIB$toString$2$Method, CGLIB$emptyArgs, CGLIB$toString$2$Proxy) : super.toString();
+    }
+
+    final int CGLIB$hashCode$3() {
+        return super.hashCode();
+    }
+
+    public final int hashCode() {
+        MethodInterceptor var10000 = this.CGLIB$CALLBACK_6;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_6;
+        }
+
+        if (var10000 != null) {
+            Object var1 = var10000.intercept(this, CGLIB$hashCode$3$Method, CGLIB$emptyArgs, CGLIB$hashCode$3$Proxy);
+            return var1 == null ? 0 : ((Number)var1).intValue();
+        } else {
+            return super.hashCode();
+        }
+    }
+
+    final Object CGLIB$clone$4() throws CloneNotSupportedException {
+        return super.clone();
+    }
+
+    protected final Object clone() throws CloneNotSupportedException {
+        MethodInterceptor var10000 = this.CGLIB$CALLBACK_0;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_0;
+        }
+
+        return var10000 != null ? var10000.intercept(this, CGLIB$clone$4$Method, CGLIB$emptyArgs, CGLIB$clone$4$Proxy) : super.clone();
+    }
+
+    public static MethodProxy CGLIB$findMethodProxy(Signature var0) {
+        String var10000 = var0.toString();
+        switch(var10000.hashCode()) {
+        case -1287932281:
+            if (var10000.equals("add(II)I")) {
+                return CGLIB$add$0$Proxy;
+            }
+            break;
+        case -508378822:
+            if (var10000.equals("clone()Ljava/lang/Object;")) {
+                return CGLIB$clone$4$Proxy;
+            }
+            break;
+        case 1826985398:
+            if (var10000.equals("equals(Ljava/lang/Object;)Z")) {
+                return CGLIB$equals$1$Proxy;
+            }
+            break;
+        case 1913648695:
+            if (var10000.equals("toString()Ljava/lang/String;")) {
+                return CGLIB$toString$2$Proxy;
+            }
+            break;
+        case 1984935277:
+            if (var10000.equals("hashCode()I")) {
+                return CGLIB$hashCode$3$Proxy;
+            }
+        }
+
+        return null;
+    }
+
+    public final int indexOf(Advice var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).indexOf(var1);
+    }
+
+    public final int indexOf(Advisor var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).indexOf(var1);
+    }
+
+    public final boolean isFrozen() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).isFrozen();
+    }
+
+    public final boolean isProxyTargetClass() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).isProxyTargetClass();
+    }
+
+    public final void setTargetSource(TargetSource var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).setTargetSource(var1);
+    }
+
+    public final void setExposeProxy(boolean var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).setExposeProxy(var1);
+    }
+
+    public final boolean isExposeProxy() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).isExposeProxy();
+    }
+
+    public final void setPreFiltered(boolean var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).setPreFiltered(var1);
+    }
+
+    public final boolean isPreFiltered() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).isPreFiltered();
+    }
+
+    public final void addAdvisor(Advisor var1) throws AopConfigException {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).addAdvisor(var1);
+    }
+
+    public final void addAdvisor(int var1, Advisor var2) throws AopConfigException {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).addAdvisor(var1, var2);
+    }
+
+    public final void removeAdvisor(int var1) throws AopConfigException {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).removeAdvisor(var1);
+    }
+
+    public final boolean removeAdvisor(Advisor var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).removeAdvisor(var1);
+    }
+
+    public final boolean replaceAdvisor(Advisor var1, Advisor var2) throws AopConfigException {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).replaceAdvisor(var1, var2);
+    }
+
+    public final void addAdvice(int var1, Advice var2) throws AopConfigException {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).addAdvice(var1, var2);
+    }
+
+    public final void addAdvice(Advice var1) throws AopConfigException {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        ((Advised)var10000.loadObject()).addAdvice(var1);
+    }
+
+    public final boolean removeAdvice(Advice var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).removeAdvice(var1);
+    }
+
+    public final String toProxyConfigString() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).toProxyConfigString();
+    }
+
+    public final TargetSource getTargetSource() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).getTargetSource();
+    }
+
+    public final Class[] getProxiedInterfaces() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).getProxiedInterfaces();
+    }
+
+    public final boolean isInterfaceProxied(Class var1) {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).isInterfaceProxied(var1);
+    }
+
+    public final Advisor[] getAdvisors() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((Advised)var10000.loadObject()).getAdvisors();
+    }
+
+    public final Class getTargetClass() {
+        Dispatcher var10000 = this.CGLIB$CALLBACK_4;
+        if (var10000 == null) {
+            CGLIB$BIND_CALLBACKS(this);
+            var10000 = this.CGLIB$CALLBACK_4;
+        }
+
+        return ((TargetClassAware)var10000.loadObject()).getTargetClass();
+    }
+
+    public CalcController$$EnhancerBySpringCGLIB$$9ebac27f() {
+        CGLIB$BIND_CALLBACKS(this);
+    }
+
+    public static void CGLIB$SET_THREAD_CALLBACKS(Callback[] var0) {
+        CGLIB$THREAD_CALLBACKS.set(var0);
+    }
+
+    public static void CGLIB$SET_STATIC_CALLBACKS(Callback[] var0) {
+        CGLIB$STATIC_CALLBACKS = var0;
+    }
+
+    private static final void CGLIB$BIND_CALLBACKS(Object var0) {
+        CalcController$$EnhancerBySpringCGLIB$$9ebac27f var1 = (CalcController$$EnhancerBySpringCGLIB$$9ebac27f)var0;
+        if (!var1.CGLIB$BOUND) {
+            var1.CGLIB$BOUND = true;
+            Object var10000 = CGLIB$THREAD_CALLBACKS.get();
+            if (var10000 == null) {
+                var10000 = CGLIB$STATIC_CALLBACKS;
+                if (var10000 == null) {
+                    return;
+                }
+            }
+
+            Callback[] var10001 = (Callback[])var10000;
+            var1.CGLIB$CALLBACK_6 = (MethodInterceptor)((Callback[])var10000)[6];
+            var1.CGLIB$CALLBACK_5 = (MethodInterceptor)var10001[5];
+            var1.CGLIB$CALLBACK_4 = (Dispatcher)var10001[4];
+            var1.CGLIB$CALLBACK_3 = (Dispatcher)var10001[3];
+            var1.CGLIB$CALLBACK_2 = (NoOp)var10001[2];
+            var1.CGLIB$CALLBACK_1 = (MethodInterceptor)var10001[1];
+            var1.CGLIB$CALLBACK_0 = (MethodInterceptor)var10001[0];
+        }
+
+    }
+
+    public Object newInstance(Callback[] var1) {
+        CGLIB$SET_THREAD_CALLBACKS(var1);
+        CalcController$$EnhancerBySpringCGLIB$$9ebac27f var10000 = new CalcController$$EnhancerBySpringCGLIB$$9ebac27f();
+        CGLIB$SET_THREAD_CALLBACKS((Callback[])null);
+        return var10000;
+    }
+
+    public Object newInstance(Callback var1) {
+        throw new IllegalStateException("More than one callback object required");
+    }
+
+    public Object newInstance(Class[] var1, Object[] var2, Callback[] var3) {
+        CGLIB$SET_THREAD_CALLBACKS(var3);
+        CalcController$$EnhancerBySpringCGLIB$$9ebac27f var10000 = new CalcController$$EnhancerBySpringCGLIB$$9ebac27f;
+        switch(var1.length) {
+        case 0:
+            var10000.<init>();
+            CGLIB$SET_THREAD_CALLBACKS((Callback[])null);
+            return var10000;
+        default:
+            throw new IllegalArgumentException("Constructor not found");
+        }
+    }
+
+    public Callback getCallback(int var1) {
+        CGLIB$BIND_CALLBACKS(this);
+        Object var10000;
+        switch(var1) {
+        case 0:
+            var10000 = this.CGLIB$CALLBACK_0;
+            break;
+        case 1:
+            var10000 = this.CGLIB$CALLBACK_1;
+            break;
+        case 2:
+            var10000 = this.CGLIB$CALLBACK_2;
+            break;
+        case 3:
+            var10000 = this.CGLIB$CALLBACK_3;
+            break;
+        case 4:
+            var10000 = this.CGLIB$CALLBACK_4;
+            break;
+        case 5:
+            var10000 = this.CGLIB$CALLBACK_5;
+            break;
+        case 6:
+            var10000 = this.CGLIB$CALLBACK_6;
+            break;
+        default:
+            var10000 = null;
+        }
+
+        return (Callback)var10000;
+    }
+
+    public void setCallback(int var1, Callback var2) {
+        switch(var1) {
+        case 0:
+            this.CGLIB$CALLBACK_0 = (MethodInterceptor)var2;
+            break;
+        case 1:
+            this.CGLIB$CALLBACK_1 = (MethodInterceptor)var2;
+            break;
+        case 2:
+            this.CGLIB$CALLBACK_2 = (NoOp)var2;
+            break;
+        case 3:
+            this.CGLIB$CALLBACK_3 = (Dispatcher)var2;
+            break;
+        case 4:
+            this.CGLIB$CALLBACK_4 = (Dispatcher)var2;
+            break;
+        case 5:
+            this.CGLIB$CALLBACK_5 = (MethodInterceptor)var2;
+            break;
+        case 6:
+            this.CGLIB$CALLBACK_6 = (MethodInterceptor)var2;
+        }
+
+    }
+
+    public Callback[] getCallbacks() {
+        CGLIB$BIND_CALLBACKS(this);
+        return new Callback[]{this.CGLIB$CALLBACK_0, this.CGLIB$CALLBACK_1, this.CGLIB$CALLBACK_2, this.CGLIB$CALLBACK_3, this.CGLIB$CALLBACK_4, this.CGLIB$CALLBACK_5, this.CGLIB$CALLBACK_6};
+    }
+
+    public void setCallbacks(Callback[] var1) {
+        this.CGLIB$CALLBACK_0 = (MethodInterceptor)var1[0];
+        this.CGLIB$CALLBACK_1 = (MethodInterceptor)var1[1];
+        this.CGLIB$CALLBACK_2 = (NoOp)var1[2];
+        this.CGLIB$CALLBACK_3 = (Dispatcher)var1[3];
+        this.CGLIB$CALLBACK_4 = (Dispatcher)var1[4];
+        this.CGLIB$CALLBACK_5 = (MethodInterceptor)var1[5];
+        this.CGLIB$CALLBACK_6 = (MethodInterceptor)var1[6];
+    }
+
+    static {
+        CGLIB$STATICHOOK3();
+    }
+}
+
+
+// 调用
+
+localhost:8080/add/4/5
+--> int result = Calculator.add(a,b);
+        // proxy = CalcController$$EnhancerBySpringCGLIB$$9ebac27f ,method = public int com.liang.aop.CalcController.add(int,int),args = [4,5],
+    --> org.springframework.aop.framework.CglibAopProxy.DynamicAdvisedInterceptor.intercept(Object proxy, Method method, Object[] args, MethodProxy methodProxy)
+        --> Object oldProxy = null;
+        --> boolean setProxyContext = false;
+        --> Object target = null;
+        --> TargetSource targetSource = this.advised.getTargetSource(); //SingletonTargetSource for target object [com.liang.aop.CalcController@343fc313]
+        --> target = targetSource.getTarget();
+        --> Class<?> targetClass = target.getClass() // class com.liang.aop.CalcController
+        --> List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
+            --> MethodCacheKey cacheKey = new MethodCacheKey(method); //public int com.liang.aop.CalcController.add(int,int)
+            --> List<Object> cached = this.methodCache.get(cacheKey);
+            --> cached = this.advisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(this, method, targetClass);
+                --> org.springframework.aop.framework.DefaultAdvisorChainFactory.getInterceptorsAndDynamicInterceptionAdvice(Advised config, Method method, @Nullable Class<?> targetClass)
+                --> AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance(); //new DefaultAdvisorAdapterRegistry();
+                --> Advisor[] advisors = config.getAdvisors(); // 还是四个拦截方法
+                --> Class<?> actualClass = targetClass
+                --> for (Advisor advisor : advisors)
+                    --> 这里执行的和上面的一样，不知道为啥执行时候又生成一次
+                    --> interceptorList.addAll(Arrays.asList(interceptors));
+
+                --> return interceptorList;
+
+            --> return cached;
+
+        --> Object retVal;
+
+            // We need to create a method invocation...
+        --> CglibMethodInvocation cglibMethodInvocation = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy)
+            --> super(proxy, target, method, arguments, targetClass, interceptorsAndDynamicMethodMatchers);
+                --> org.springframework.aop.framework.ReflectiveMethodInvocation.ReflectiveMethodInvocation
+                    --> this.proxy = proxy; // CalcController$$EnhancerBySpringCGLIB$$9ebac27f
+                    --> this.target = target; // CalcController
+                    --> this.targetClass = targetClass; // class com.liang.aop.CalcController
+                    --> this.method = BridgeMethodResolver.findBridgedMethod(method); // public int com.liang.aop.CalcController.add(int,int)
+                    --> this.arguments = AopProxyUtils.adaptArgumentsIfNecessary(method, arguments); //[4,5]
+                    --> this.interceptorsAndDynamicMethodMatchers = interceptorsAndDynamicMethodMatchers; // 四个拦截方法
+
+            --> this.methodProxy = methodProxy
+
+        --> retVal = cglibMethodInvocation.proceed();
+            --> org.springframework.aop.framework.CglibAopProxy.CglibMethodInvocation.proceed
+                --> return super.proceed();
+                    --> org.springframework.aop.framework.ReflectiveMethodInvocation.proceed
+                            // 这里是个递归调用，拦截方法会按照排序执行，直到出现了合适拦截方法时候开始执行
+                        --> Object interceptorOrInterceptionAdvice = this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+                        --> return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+                            --> org.springframework.aop.interceptor.ExposeInvocationInterceptor.invoke(MethodInvocation mi)
+                                --> MethodInvocation oldInvocation = invocation.get();
+                                --> invocation.set(mi);
+                                --> return mi.proceed();
+                                        //前置处理器
+                                    --> this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis());
+                                        --> org.springframework.aop.aspectj.AspectJMethodBeforeAdvice.before(Method method, Object[] args, @Nullable Object target)
+                                            --> JoinPointMatch joinPointMatch = getJoinPointMatch()
+                                                --> MethodInvocation mi = ExposeInvocationInterceptor.currentInvocation();
+                                                --> return getJoinPointMatch((ProxyMethodInvocation) mi);
+                                                    --> String expression = this.pointcut.getExpression(); // webLog()
+                                                    --> return (expression != null ? (JoinPointMatch) pmi.getUserAttribute(expression) : null);
+                                                        --> return null
+
+                                            --> invokeAdviceMethod(joinPointMatch, null, null);
+                                                --> JoinPoint joinPoint = getJoinPoint()
+                                                    --> return currentJoinPoint();
+                                                        --> MethodInvocation mi = ExposeInvocationInterceptor.currentInvocation();
+                                                        --> ProxyMethodInvocation pmi = (ProxyMethodInvocation) mi;
+                                                        --> JoinPoint jp = (JoinPoint) pmi.getUserAttribute(JOIN_POINT_KEY);
+                                                        --> jp = new MethodInvocationProceedingJoinPoint(pmi);
+                                                        --> return jp;
+
+                                                --> Object[] objects = argBinding(joinPoint, jpMatch, returnValue, ex)
+                                                    --> return adviceInvocationArgs; // execution(int com.liang.aop.CalcController.add(int,int))
+
+                                                --> return invokeAdviceMethodWithGivenArgs(objects);
+                                                    --> Object[] actualArgs = args;
+                                                    --> Object aspectInstance = this.aspectInstanceFactory.getAspectInstance()
+                                                        --> Object mutex = this.maaif.getAspectCreationMutex(); // null
+                                                        --> aspectInstance = this.maaif.getAspectInstance();
+                                                            --> org.springframework.aop.aspectj.annotation.BeanFactoryAspectInstanceFactory.getAspectInstance
+                                                                --> return this.beanFactory.getBean(this.name);
+                                                        --> this.materialized = aspectInstance;
+                                                        --> return aspectInstance; // CalcLog
+
+                                                    --> return this.aspectJAdviceMethod.invoke(aspectInstance, actualArgs);
+                                                        --> java.lang.reflect.Method.invoke
+                                                            --> MethodAccessor ma = methodAccessor;
+                                                            --> return ma.invoke(obj, args);
+                                                                --> sun.reflect.DelegatingMethodAccessorImpl.invoke
+                                                                    --> return this.delegate.invoke(var1, var2);
+                                                                        --> sun.reflect.NativeMethodAccessorImpl.invoke
+                                                                            --> return invoke0(this.method, var1, var2);
+                                                                                --> com.liang.aop.CalcLog.doBefore
+
+
+                                    --> Object retVal = mi.proceed();
+
+                                        //后置处理器
+                                    --> this.advice.afterReturning(retVal, mi.getMethod(), mi.getArguments(), mi.getThis());
+                                        --> org.springframework.aop.aspectj.AspectJAfterReturningAdvice.afterReturning
+                                            --> invokeAdviceMethod(getJoinPointMatch(), returnValue, null);
+                                                --> org.springframework.aop.aspectj.AbstractAspectJAdvice.invokeAdviceMethod(org.aspectj.weaver.tools.JoinPointMatch, java.lang.Object, java.lang.Throwable)
+                                                    --> JoinPoint joinPoint = getJoinPoint()
+                                                        --> return currentJoinPoint();
+                                                            --> MethodInvocation mi = ExposeInvocationInterceptor.currentInvocation();
+                                                            --> ProxyMethodInvocation pmi = (ProxyMethodInvocation) mi;
+                                                            --> JoinPoint jp = (JoinPoint) pmi.getUserAttribute(JOIN_POINT_KEY);
+                                                            --> jp = new MethodInvocationProceedingJoinPoint(pmi);
+                                                            --> return jp;
+
+                                                    --> Object[] objects = argBinding(joinPoint, jpMatch, returnValue, ex)
+                                                        --> return adviceInvocationArgs; // execution(int com.liang.aop.CalcController.add(int,int))
+
+                                                    --> return invokeAdviceMethodWithGivenArgs(objects);
+                                                        --> Object[] actualArgs = args;
+                                                        --> Object aspectInstance = this.aspectInstanceFactory.getAspectInstance()
+                                                            --> Object mutex = this.maaif.getAspectCreationMutex(); // null
+                                                            --> aspectInstance = this.maaif.getAspectInstance();
+                                                                --> org.springframework.aop.aspectj.annotation.BeanFactoryAspectInstanceFactory.getAspectInstance
+                                                                    --> return this.beanFactory.getBean(this.name);
+                                                            --> this.materialized = aspectInstance;
+                                                            --> return aspectInstance; // CalcLog
+
+                                                        --> return this.aspectJAdviceMethod.invoke(aspectInstance, actualArgs);
+                                                            --> java.lang.reflect.Method.invoke
+                                                                --> MethodAccessor ma = methodAccessor;
+                                                                --> return ma.invoke(obj, args);
+                                                                    --> sun.reflect.DelegatingMethodAccessorImpl.invoke
+                                                                        --> return this.delegate.invoke(var1, var2);
+                                                                            --> sun.reflect.NativeMethodAccessorImpl.invoke
+                                                                                --> return invoke0(this.method, var1, var2);
+                                                                                    --> com.liang.aop.CalcLog.doAfterReturning
+
+                                    --> return retVal;
+
+
+        --> retVal = processReturnType(proxy, target, method, retVal);
+            --> org.springframework.aop.framework.CglibAopProxy.processReturnType
+                --> Class<?> returnType = method.getReturnType(); // int
+                --> return returnValue;
+
+        --> return retVal;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
